@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -35,7 +59,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      conversations: {
+        Row: {
+          last_message: string | null
+          last_message_at: string | null
+          user1_id: string | null
+          user2_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

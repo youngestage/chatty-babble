@@ -10,14 +10,13 @@ import { Card } from "@/components/ui/card";
 const Index = () => {
   const [session, setSession] = useState(null);
   const [authError, setAuthError] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -29,6 +28,10 @@ const Index = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const handleSelectConversation = (userId: string) => {
+    setSelectedUserId(userId);
+  };
 
   if (!session) {
     return (
@@ -63,8 +66,8 @@ const Index = () => {
 
   return (
     <div className="flex min-h-screen bg-white">
-      <ChatSidebar />
-      <ChatWindow />
+      <ChatSidebar onSelectConversation={handleSelectConversation} />
+      <ChatWindow selectedUserId={selectedUserId} />
     </div>
   );
 };
