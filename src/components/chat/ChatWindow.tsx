@@ -22,8 +22,17 @@ export const ChatWindow = ({ selectedUserId }: ChatWindowProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+    };
+    fetchCurrentUser();
+  }, []);
 
   useEffect(() => {
     if (selectedUserId) {
@@ -64,15 +73,12 @@ export const ChatWindow = ({ selectedUserId }: ChatWindowProps) => {
   };
 
   const fetchMessages = async () => {
-    if (!selectedUserId) return;
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!selectedUserId || !currentUser) return;
 
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUserId}),and(sender_id.eq.${selectedUserId},receiver_id.eq.${user.id})`)
+      .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${selectedUserId}),and(sender_id.eq.${selectedUserId},receiver_id.eq.${currentUser.id})`)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -110,14 +116,11 @@ export const ChatWindow = ({ selectedUserId }: ChatWindowProps) => {
   };
 
   const handleSend = async () => {
-    if (!newMessage.trim() || !selectedUserId) return;
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!newMessage.trim() || !selectedUserId || !currentUser) return;
 
     const message = {
       content: newMessage.trim(),
-      sender_id: user.id,
+      sender_id: currentUser.id,
       receiver_id: selectedUserId,
     };
 
@@ -138,8 +141,6 @@ export const ChatWindow = ({ selectedUserId }: ChatWindowProps) => {
     setNewMessage("");
   };
 
-  const { data: { user } } = await supabase.auth.getUser();
-
   return (
     <div className="flex-1 flex flex-col h-screen">
       <div className="p-4 border-b border-gray-200">
@@ -152,11 +153,11 @@ export const ChatWindow = ({ selectedUserId }: ChatWindowProps) => {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.sender_id === user?.id ? "justify-end" : "justify-start"}`}
+              className={`flex ${message.sender_id === currentUser?.id ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`max-w-[70%] p-3 rounded-lg ${
-                  message.sender_id === user?.id
+                  message.sender_id === currentUser?.id
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted"
                 }`}

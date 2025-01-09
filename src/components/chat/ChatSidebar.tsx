@@ -1,16 +1,32 @@
 import { useState, useEffect } from "react";
-import { User, Conversation } from "@/types/chat";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
+interface Profile {
+  username: string | null;
+  avatar_url: string | null;
+}
+
+interface ConversationUser {
+  id: string;
+  name: string;
+  avatar?: string | null;
+}
+
+interface Conversation {
+  id: string;
+  user: ConversationUser;
+  lastMessage: string | null;
+  timestamp: string | null;
+}
+
 export const ChatSidebar = ({ onSelectConversation }: { onSelectConversation: (userId: string) => void }) => {
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const { toast } = useToast();
-  const currentUser = supabase.auth.getUser();
 
   useEffect(() => {
     fetchConversations();
@@ -47,15 +63,15 @@ export const ChatSidebar = ({ onSelectConversation }: { onSelectConversation: (u
 
       const formattedConversations = data.map(conv => {
         const isUser1 = conv.user1_id === user.id;
-        const otherUser = isUser1 ? conv.profiles[1] : conv.profiles[0];
+        const otherUserProfile = isUser1 ? conv.profiles[1] : conv.profiles[0] as Profile;
         const otherUserId = isUser1 ? conv.user2_id : conv.user1_id;
         
         return {
           id: otherUserId,
           user: {
             id: otherUserId,
-            name: otherUser?.username || 'Unknown User',
-            avatar: otherUser?.avatar_url
+            name: otherUserProfile?.username || 'Unknown User',
+            avatar: otherUserProfile?.avatar_url
           },
           lastMessage: conv.last_message,
           timestamp: conv.last_message_at
@@ -109,7 +125,7 @@ export const ChatSidebar = ({ onSelectConversation }: { onSelectConversation: (u
             >
               <div className="flex items-center space-x-3">
                 <Avatar>
-                  <AvatarImage src={conversation.user.avatar} />
+                  <AvatarImage src={conversation.user.avatar || undefined} />
                   <AvatarFallback>
                     {conversation.user.name.charAt(0)}
                   </AvatarFallback>
