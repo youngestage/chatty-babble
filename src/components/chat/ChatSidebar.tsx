@@ -38,45 +38,58 @@ export const ChatSidebar = ({ onSelectConversation }: { onSelectConversation: (u
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      // First fetch conversations
+      const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
-        .select(`
-          user1_id,
-          user2_id,
-          last_message,
-          last_message_at,
-          profiles!conversations_user1_id_fkey (username, avatar_url),
-          profiles!conversations_user2_id_fkey (username, avatar_url)
-        `)
+        .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .order('last_message_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching conversations:', error);
+      if (conversationsError) {
+        console.error('Error fetching conversations:', conversationsError);
         toast({
           variant: "destructive",
           title: "Error fetching conversations",
-          description: error.message
+          description: conversationsError.message
         });
         return;
       }
 
-      const formattedConversations = data.map(conv => {
-        const isUser1 = conv.user1_id === user.id;
-        const otherUserProfile = isUser1 ? conv.profiles[1] : conv.profiles[0] as Profile;
-        const otherUserId = isUser1 ? conv.user2_id : conv.user1_id;
+      // Then fetch profiles for each conversation
+      const formattedConversations = await Promise.all(conversationsData.map(async (conv) => {
+        const otherUserId = conv.user1_id === user.id ? conv.user2_id : conv.user1_id;
         
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', otherUserId)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+          return {
+            id: otherUserId,
+            user: {
+              id: otherUserId,
+              name: 'Unknown User',
+              avatar: null
+            },
+            lastMessage: conv.last_message,
+            timestamp: conv.last_message_at
+          };
+        }
+
         return {
           id: otherUserId,
           user: {
             id: otherUserId,
-            name: otherUserProfile?.username || 'Unknown User',
-            avatar: otherUserProfile?.avatar_url
+            name: profileData.username || 'Unknown User',
+            avatar: profileData.avatar_url
           },
           lastMessage: conv.last_message,
           timestamp: conv.last_message_at
         };
-      });
+      }));
 
       setConversations(formattedConversations);
     } catch (error) {
