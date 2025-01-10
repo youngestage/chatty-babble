@@ -140,7 +140,7 @@ export const ChatSidebar = ({ onSelectConversation }: { onSelectConversation: (u
                 <Avatar>
                   <AvatarImage src={conversation.user.avatar || undefined} />
                   <AvatarFallback>
-                    {conversation.user.name.charAt(0)}
+                    {conversation.user.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
